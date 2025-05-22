@@ -3,15 +3,17 @@ import json
 import random
 import string
 from flask import Flask, render_template, request, jsonify, send_from_directory, make_response
-from datetime import datetime, timedelta
+from datetime import datetime
 from fpdf import FPDF
 
-app = Flask(__name__)
-
-RESERVATION_FILE = 'reservations.json'
+# Chemin absolu pour Railway/Linux
+BASEDIR = os.path.abspath(os.path.dirname(__file__))
+RESERVATION_FILE = os.path.join(BASEDIR, 'reservations.json')
 ADMIN_CODE = 's0r1'
 
 EMOJIS = ['😸','🐶','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐷','🐸','🐵','🐔','🐧','🐦','🐤','🐢','🐍','🦄','🐝','🦋','🐞','🐙','🦑','🦞','🐳','🐬','🦈','🦭','🐊']
+
+app = Flask(__name__)
 
 def load_reservations():
     if not os.path.exists(RESERVATION_FILE):
@@ -30,9 +32,6 @@ def generate_code():
 def generate_emoji():
     return random.choice(EMOJIS)
 
-def is_overlap(res1, res2):
-    return res1['date'] == res2['date'] and res1['machine'] == res2['machine'] and res1['heure'] == res2['heure']
-
 def can_reserve(chambre, date, machine, reservations):
     count = sum(1 for r in reservations if r['chambre'] == chambre and r['date'] == date and r['machine'] == machine)
     return count < 3
@@ -47,11 +46,11 @@ def calendar():
 
 @app.route('/manifest.json')
 def manifest():
-    return send_from_directory('.', 'manifest.json', mimetype='application/json')
+    return send_from_directory(BASEDIR, 'manifest.json', mimetype='application/json')
 
 @app.route('/service-worker.js')
 def sw():
-    response = make_response(send_from_directory('.', 'service-worker.js'))
+    response = make_response(send_from_directory(BASEDIR, 'service-worker.js'))
     response.headers['Content-Type'] = 'application/javascript'
     return response
 
@@ -162,7 +161,5 @@ def ticket():
     return response
 
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
