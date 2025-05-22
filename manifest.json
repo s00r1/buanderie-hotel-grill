@@ -1,0 +1,16 @@
+{
+  "name": "Buanderie Hotel Grill",
+  "short_name": "Buanderie",
+  "description": "Réservation de buanderie Hôtel Grill",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2c3e50",
+  "theme_color": "#2c3e50",
+  "icons": [
+    {
+      "src": "/static/logo.gif",
+      "type": "image/gif",
+      "sizes": "192x192"
+    }
+  ]
+}

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Réservation Buanderie</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/gif" href="{{ url_for('static', filename='logo.gif') }}">
+    <meta name="theme-color" content="#2c3e50">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0; padding: 0;
+            background: #f4f4f4;
+            transition: background 0.3s, color 0.3s;
+        }
+        body.dark-mode {
+            background: #121212;
+            color: #f0f0f0;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1em;
+            text-align: center;
+            position: relative;
+        }
+        #darkToggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            font-size: 2em;
+        }
+        .logo {
+            height: 160px;
+            margin-bottom: 10px;
+        }
+        .container {
+            padding: 1.5em;
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.08);
+            border-radius: 16px;
+            overflow: visible;
+        }
+        body.dark-mode .container {
+            background: #1e1e1e;
+        }
+        label { display: block; margin-top: 1em; font-weight: bold; }
+        select, input, button {
+            width: 100%;
+            padding: 0.9em;
+            margin-top: 0.5em;
+            border: 1px solid #bbb;
+            border-radius: 7px;
+            font-size: 1.1em;
+        }
+        button {
+            margin-top: 1em;
+            background-color: #27ae60;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            transition: background 0.2s;
+        }
+        button:hover { background: #219150; }
+        #calendar { margin-top: 2em; }
+        .legend {
+            margin: 15px 0 10px 0;
+            font-size: 1.07em;
+        }
+        .legend span {
+            display: inline-block;
+            margin-right: 1em;
+            padding: 0.3em 0.8em;
+            border-radius: 8px;
+        }
+        .legend .ll { background: #0074D9; color: #fff; }
+        .legend .sl { background: orange; color: #fff; }
+        .legend .past { background: #999; color: #fff; }
+        .quick-slots {
+            margin: 1em 0 1em 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5em;
+        }
+        .quick-slots button {
+            background: #eee;
+            color: #222;
+            border: 1px solid #ccc;
+            padding: 0.4em 1.1em;
+            border-radius: 8px;
+            font-size: 1em;
+            margin: 0;
+        }
+        .quick-slots button.active,
+        .quick-slots button:focus {
+            background: #27ae60;
+            color: #fff;
+            border-color: #27ae60;
+        }
+        .code-emoji {
+            font-size: 1.3em;
+            margin-top: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .ticket-btn {
+            background: #ff8c00;
+            margin-top: 0.5em;
+            margin-bottom: 1em;
+        }
+        @media screen and (max-width: 600px) {
+            .container { padding: 0.7em; }
+            .logo { height: 90px; }
+            label, input, select, button { font-size: 1em; }
+            #calendar { font-size: 0.97em; }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div id="darkToggle" title="Changer de mode">&#x1F311;</div>
+    <h1>Hotel Grill</h1>
+    <img src="{{ url_for('static', filename='logo.gif') }}" alt="Logo Hôtel" class="logo">
+    <h2>Réservation Buanderie</h2>
+</header>
+<div class="container">
+    <div class="legend">
+        <span class="ll">Lave-linge = Bleu</span>
+        <span class="sl">Sèche-linge = Orange</span>
+        <span class="past">Grisé = passé</span>
+    </div>
+    <form id="reservation-form">
+        <label>Chambre</label>
+        <select id="chambre" required>
+            <option value="">Sélectionner...</option>
+            <option value="01">01</option><option value="02">02</option><option value="03">03</option>
+            <option value="04">04</option><option value="05">05</option><option value="06">06</option>
+            <option value="07">07</option><option value="08">08</option><option value="09">09</option>
+            <option value="10">10</option>
+        </select>
+        <label>Date</label>
+        <input type="date" id="date" required>
+        <label>Heure (7h-23h)</label>
+        <select id="heure" required></select>
+        <div class="quick-slots" id="quick-slots"></div>
+        <label>Machine</label>
+        <select id="machine" required>
+            <option value="lave-linge">Lave-linge</option>
+            <option value="seche-linge">Sèche-linge</option>
+        </select>
+        <button type="submit">Réserver</button>
+        <div class="code-emoji" id="result-code"></div>
+        <button type="button" id="download-ticket" class="ticket-btn" style="display:none;">Télécharger le ticket PDF</button>
+    </form>
+    <form id="delete-form" style="margin-top:2em;">
+        <h3>Supprimer une réservation</h3>
+        <label>Chambre</label>
+        <select id="del-chambre" required>
+            <option value="">Sélectionner...</option>
+            <option value="01">01</option><option value="02">02</option><option value="03">03</option>
+            <option value="04">04</option><option value="05">05</option><option value="06">06</option>
+            <option value="07">07</option><option value="08">08</option><option value="09">09</option>
+            <option value="10">10</option>
+        </select>
+        <label>Date</label>
+        <input type="date" id="del-date" required>
+        <label>Heure</label>
+        <select id="del-heure" required></select>
+        <label>Machine</label>
+        <select id="del-machine" required>
+            <option value="lave-linge">Lave-linge</option>
+            <option value="seche-linge">Sèche-linge</option>
+        </select>
+        <label>Code (ou admin)</label>
+        <input type="password" id="del-code" maxlength="6" required>
+        <button type="submit">Supprimer</button>
+        <div id="delete-msg" style="color:#c00; margin-top:10px;"></div>
+    </form>
+    <div style="margin: 2em 0;">
+        <button id="today-btn">Aujourd’hui</button>
+    </div>
+    <div id="calendar"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+<script>
+// --- DARK MODE ---
+function setDarkMode(enabled) {
+    document.body.classList.toggle('dark-mode', enabled);
+    localStorage.setItem('darkMode', enabled ? '1' : '0');
+}
+function autoDarkMode() {
+    const h = new Date().getHours();
+    setDarkMode(h < 8 || h >= 20);
+}
+document.getElementById('darkToggle').onclick = function() {
+    setDarkMode(!document.body.classList.contains('dark-mode'));
+};
+window.onload = function() {
+    if(localStorage.getItem('darkMode')) {
+        setDarkMode(localStorage.getItem('darkMode')==='1');
+    } else {
+        autoDarkMode();
+    }
+};
+
+// --- CHAMBRE MEMORISATION ---
+const chambreSel = document.getElementById('chambre');
+if(localStorage.getItem('chambre')) chambreSel.value = localStorage.getItem('chambre');
+chambreSel.onchange = () => localStorage.setItem('chambre', chambreSel.value);
+
+// --- HEURES DISPONIBLES + QUICK SLOTS ---
+function fillHeures(sel, date) {
+    sel.innerHTML = '';
+    let now = new Date();
+    let d = date ? new Date(date) : now;
+    let today = now.toISOString().slice(0,10) === d.toISOString().slice(0,10);
+    for(let h=7; h<=22; h++) {
+        if(today && h <= now.getHours()) continue;
+        let opt = document.createElement('option');
+        opt.value = `${String(h).padStart(2,'0')}:00`;
+        opt.innerText = `${String(h).padStart(2,'0')}h00`;
+        sel.appendChild(opt);
+    }
+}
+function createQuickSlots() {
+    let qs = document.getElementById('quick-slots');
+    qs.innerHTML = '';
+    for(let h=7; h<=22; h++) {
+        let b = document.createElement('button');
+        b.type = "button";
+        b.innerText = `${String(h).padStart(2,'0')}h`;
+        b.onclick = function() {
+            document.getElementById('heure').value = `${String(h).padStart(2,'0')}:00`;
+            let bs = qs.querySelectorAll('button');
+            bs.forEach(bb=>bb.classList.remove('active'));
+            b.classList.add('active');
+        }
+        qs.appendChild(b);
+    }
+}
+document.getElementById('date').onchange = function() {
+    fillHeures(document.getElementById('heure'), this.value);
+    createQuickSlots();
+};
+document.getElementById('del-date').onchange = function() {
+    fillHeures(document.getElementById('del-heure'), this.value);
+};
+window.addEventListener('DOMContentLoaded', ()=>{
+    let today = new Date().toISOString().slice(0,10);
+    document.getElementById('date').value = today;
+    document.getElementById('del-date').value = today;
+    fillHeures(document.getElementById('heure'), today);
+    fillHeures(document.getElementById('del-heure'), today);
+    createQuickSlots();
+});
+
+// --- RESERVATION FORM ---
+document.getElementById('reservation-form').onsubmit = async function(e) {
+    e.preventDefault();
+    let chambre = chambreSel.value, date = document.getElementById('date').value;
+    let heure = document.getElementById('heure').value, machine = document.getElementById('machine').value;
+    if(!chambre||!date||!heure||!machine) return;
+    let res = await fetch('/reservation', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ chambre, date, heure, machine })
+    });
+    let result = await res.json();
+    let out = document.getElementById('result-code');
+    if(result.success) {
+        out.innerHTML = `✔️ Code : <b>${result.code}</b> <span>${result.emoji}</span>`;
+        document.getElementById('download-ticket').style.display = 'inline-block';
+        document.getElementById('download-ticket').onclick = function() {
+            fetch('/ticket', {
+                method: 'POST',
+                headers: { 'Content-Type':'application/json' },
+                body: JSON.stringify({ chambre, date, heure, machine, code: result.code, emoji: result.emoji })
+            })
+            .then(r=>r.blob())
+            .then(blob=>{
+                let url = URL.createObjectURL(blob);
+                let a = document.createElement('a');
+                a.href = url; a.download = 'ticket_buanderie.pdf'; a.click();
+                setTimeout(()=>URL.revokeObjectURL(url), 500);
+            });
+        };
+        showCalendar(); // refresh calendar
+    } else {
+        out.innerHTML = `<span style="color:red;">${result.msg||'Erreur'}</span>`;
+        document.getElementById('download-ticket').style.display = 'none';
+    }
+};
+
+// --- DELETE FORM ---
+document.getElementById('delete-form').onsubmit = async function(e) {
+    e.preventDefault();
+    let chambre = document.getElementById('del-chambre').value,
+        date = document.getElementById('del-date').value,
+        heure = document.getElementById('del-heure').value,
+        machine = document.getElementById('del-machine').value,
+        code = document.getElementById('del-code').value;
+    let res = await fetch('/reservation', {
+        method: 'DELETE',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ chambre, date, heure, machine, code })
+    });
+    let result = await res.json();
+    let msg = document.getElementById('delete-msg');
+    if(result.success) {
+        msg.innerHTML = '<span style="color:green">✔️ Réservation supprimée.</span>';
+        showCalendar();
+    } else {
+        msg.innerHTML = result.msg||'Erreur';
+    }
+};
+
+// --- CALENDRIER ---
+let calendar;
+function showCalendar() {
+    fetch('/reservations')
+    .then(r=>r.json())
+    .then(data=>{
+        let events = [];
+        let now = new Date();
+        data.forEach(r=>{
+            let color = r.machine=='lave-linge' ? '#0074D9' : 'orange';
+            let start = `${r.date}T${r.heure}`;
+            let endH = (parseInt(r.heure.split(':')[0])+1).toString().padStart(2,'0');
+            let end = `${r.date}T${endH}:00`;
+            let event = {
+                title: r.machine=='lave-linge' ? 'Lave-linge' : 'Sèche-linge',
+                start, end,
+                color,
+                extendedProps: {
+                    chambre: r.chambre,
+                    code: r.code,
+                    emoji: r.emoji
+                }
+            };
+            let eventDate = new Date(start);
+            if(eventDate < now) {
+                event.color = '#999'; // Grisé
+            }
+            events.push(event);
+        });
+        if(calendar) calendar.destroy();
+        calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+            initialView: 'timeGridDay',
+            slotMinTime: "07:00:00",
+            slotMaxTime: "23:00:00",
+            allDaySlot: false,
+            height: "auto",
+            nowIndicator: true,
+            locale: 'fr',
+            headerToolbar: {
+                left: '',
+                center: 'title',
+                right: ''
+            },
+            events: events,
+            eventDidMount: function(info) {
+                info.el.title = `Chambre : ${info.event.extendedProps.chambre}`;
+            }
+        });
+        calendar.render();
+        // Auto-scroll to now
+        let nowHour = now.getHours();
+        let scrollRow = document.querySelector(`.fc-timegrid-slot[data-time="${String(nowHour).padStart(2,'0')}:00:00"]`);
+        if(scrollRow) scrollRow.scrollIntoView({behavior:'smooth', block:'center'});
+    });
+}
+window.addEventListener('DOMContentLoaded', showCalendar);
+
+// --- BTN AUJOURD'HUI ---
+document.getElementById('today-btn').onclick = function() {
+    let today = new Date().toISOString().slice(0,10);
+    document.getElementById('date').value = today;
+    document.getElementById('del-date').value = today;
+    fillHeures(document.getElementById('heure'), today);
+    fillHeures(document.getElementById('del-heure'), today);
+    createQuickSlots();
+    showCalendar();
+};
+
+// --- INSTALL PWA ---
+if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/service-worker.js');
+}
+
+</script>
+</body>
+</html>
